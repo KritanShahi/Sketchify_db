@@ -10,7 +10,7 @@ from .serializers import SignupSerializer, UploadedImageSerializer
 from .models import UploadedImage
 from rest_framework import generics, permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+import time
 # ---------- Signup ----------
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -51,6 +51,7 @@ def login(request):
 # ---------- Image Upload ----------
 class UploadImageView(APIView):
     permission_classes = [IsAuthenticated]  # <== IMPORTANT
+    parser_classes = [MultiPartParser, FormParser] 
 
     def post(self, request, *args, **kwargs):
         print("AUTH USER:", request.user)      # DEBUG
@@ -58,7 +59,16 @@ class UploadImageView(APIView):
 
         print("AUTH HEADER:", request.headers.get("Authorization"))
 
-        serializer = UploadedImageSerializer(data=request.data)
+        #serializer = UploadedImageSerializer(data=request.data)
+        data = request.data.copy()
+        data['user'] = request.user.id   # assign user ID
+
+
+  # Ensure 'name' exists; fallback to a default name if not provided
+        '''if not data.get('name'):
+            data['name'] = f"Image_{request.user.username}_{int(time.time())}"'''
+        serializer = UploadedImageSerializer(data=data, context={'request': request})
+        
 
         if serializer.is_valid():
             # Correct: assign the actual user instance

@@ -26,7 +26,7 @@ class UploadedImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UploadedImage
-        fields = ("id", "image", "image_url", "effect", "created_at", "username")
+        fields = ("id", "image", "image_url", "effect","name", "created_at", "username")
         read_only_fields = ("created_at", "username")
 
     def get_image_url(self, obj):
