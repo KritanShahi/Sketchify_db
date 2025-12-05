@@ -21,12 +21,13 @@ class SignupSerializer(serializers.ModelSerializer):
 
 class UploadedImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()  # for frontend URL
-    image = serializers.ImageField(write_only=True)  # include actual image field for saving
+    image = serializers.ImageField(write_only=True)  # for saving
+    username = serializers.CharField(source='user.username', read_only=True)  # <-- add this
 
     class Meta:
         model = UploadedImage
-        fields = ("id", "image", "image_url", "effect", "created_at")  # include 'image'
-        read_only_fields = ("created_at",)
+        fields = ("id", "image", "image_url", "effect", "created_at", "username")
+        read_only_fields = ("created_at", "username")
 
     def get_image_url(self, obj):
         if obj.image and hasattr(obj.image, 'url'):

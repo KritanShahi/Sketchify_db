@@ -66,20 +66,7 @@ class UploadImageView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-'''
-class UploadedImageListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UploadedImageSerializer
 
-    def get_queryset(self):
-        print("AUTH HEADER:", self.request.headers.get("Authorization"))
-        print("USER:", self.request.user)
-        return UploadedImage.objects.filter(user=self.request.user).order_by('-created_at')
-
-    def get_serializer_context(self):
-        # Without this, image_url is broken
-        return {"request": self.request}
-'''
 class UploadedImageListView(generics.ListAPIView):
     authentication_classes = [JWTAuthentication]   # <-- explicitly optional
     permission_classes = [permissions.IsAuthenticated]
@@ -92,3 +79,47 @@ class UploadedImageListView(generics.ListAPIView):
 
     def get_serializer_context(self):
         return {"request": self.request}
+
+
+# ---------- Public Images ----------
+class PublicImageListView(generics.ListAPIView):
+    permission_classes = [permissions.AllowAny]  # Anyone can see
+    serializer_class = UploadedImageSerializer
+
+    def get_queryset(self):
+        # Return all images, newest first
+        return UploadedImage.objects.all().order_by('-created_at')
+
+    def get_serializer_context(self):
+        # Ensure image_url works correctly
+        return {"request": self.request}
+
+
+class DeleteImageView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, id, *args, **kwargs):
+        try:
+            image = UploadedImage.objects.get(id=id)
+        except UploadedImage.DoesNotExist:
+            return Response({"error": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Only allow the owner to delete
+        if image.user != request.user:
+            return Response({"error": "You do not have permission to delete this image"}, status=status.HTTP_403_FORBIDDEN)
+
+        image.delete()
+        return Response({"message": "Image deleted successfully"}, status=status.HTTP_200_OK)
+
+
+        # Admin-only delete
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAdminUser])
+def delete_public_image(request, pk):
+    try:
+        image = PublicImage.objects.get(pk=pk)
+        image.delete()
+        return Response({"detail": "Image deleted"}, status=status.HTTP_204_NO_CONTENT)
+    except PublicImage.DoesNotExist:
+        return Response({"detail": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
